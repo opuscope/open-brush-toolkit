@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@ Properties {
   _Scroll1 ("Scroll1", Float) = 0
   _Scroll2 ("Scroll2", Float) = 0
   _DisplacementIntensity("Displacement", Float) = .1
-  _EmissionGain ("Emission Gain", Range(0, 1)) = 0.5
+    _EmissionGain ("Emission Gain", Range(0, 1)) = 0.5
 }
 
 Category {
@@ -38,12 +38,10 @@ Category {
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile_particles
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
       #pragma target 3.0 // Required -> compiler error: too many instructions for SM 2.0
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -55,7 +53,7 @@ Category {
       };
 
       struct v2f {
-        float4 pos : POSITION;
+        float4 vertex : SV_POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
         float4 worldPos : TEXCOORD1;
@@ -73,7 +71,7 @@ Category {
 
         v2f o;
         o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-        o.pos = UnityObjectToClipPos(v.vertex);
+        o.vertex = UnityObjectToClipPos(v.vertex);
         o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
         o.color = v.color;
         return o;
@@ -86,7 +84,7 @@ Category {
       }
 
       // Input color is srgb
-      fixed4 frag (v2f i) : COLOR
+      fixed4 frag (v2f i) : SV_Target
       {
         // Create parametric flowing UV's
         half2 uvs = i.texcoord;
@@ -126,7 +124,6 @@ Category {
         float4 color = i.color * tex * exp(_EmissionGain * 5.0f);
         color = float4(color.rgb * color.a, 1.0);
         color = SrgbToNative(color);
-        FRAG_MOBILESELECT(color)
         return color;
       }
       ENDCG

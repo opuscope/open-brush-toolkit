@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,10 +31,8 @@ Shader "Brush/Special/CelVinyl" {
         #pragma fragment frag
         #pragma multi_compile __ TBT_LINEAR_TARGET
         #pragma multi_compile_fog
-        #pragma multi_compile __ SELECTION_ON
         #include "../../../Shaders/Include/Brush.cginc"
         #include "UnityCG.cginc"
-        #include "../../../Shaders/Include/MobileSelection.cginc"
         #pragma target 3.0
 
         sampler2D _MainTex;
@@ -49,7 +47,7 @@ Shader "Brush/Special/CelVinyl" {
         };
 
         struct v2f {
-            float4 pos : POSITION;
+            float4 vertex : SV_POSITION;
             float2 texcoord : TEXCOORD0;
             float4 color : COLOR;
             UNITY_FOG_COORDS(1)
@@ -60,14 +58,14 @@ Shader "Brush/Special/CelVinyl" {
 
           v2f o;
 
-          o.pos = UnityObjectToClipPos(v.vertex);
+          o.vertex = UnityObjectToClipPos(v.vertex);
           o.texcoord = v.texcoord;
           o.color = TbVertToNative(v.color);
-          UNITY_TRANSFER_FOG(o, o.pos);
+          UNITY_TRANSFER_FOG(o, o.vertex);
           return o;
         }
 
-        fixed4 frag (v2f i) : COLOR
+        fixed4 frag (v2f i) : SV_Target
         {
           fixed4 tex = tex2D(_MainTex, i.texcoord) * i.color;
           UNITY_APPLY_FOG(i.fogCoord, tex);
@@ -76,8 +74,6 @@ Shader "Brush/Special/CelVinyl" {
           if (tex.a < _Cutoff) {
             discard;
           }
-          tex.a = 1;
-          FRAG_MOBILESELECT(tex)
           return tex;
         }
 

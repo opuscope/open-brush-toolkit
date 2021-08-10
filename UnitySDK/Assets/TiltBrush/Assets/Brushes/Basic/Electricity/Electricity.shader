@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,17 +20,9 @@ Properties {
 }
 
 CGINCLUDE
-  #pragma multi_compile __ SELECTION_ON
   #include "UnityCG.cginc"
   #include "../../../Shaders/Include/Brush.cginc"
   #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
-  #include "../../../Shaders/Include/MobileSelection.cginc"
-
-  #ifdef SHADER_API_D3D11
-  #  define SHARP_AND_BLOOMY 1
-  #else
-  #  define SHARP_AND_BLOOMY 0
-  #endif
 
   struct appdata_t {
     float4 vertex : POSITION;
@@ -46,7 +38,7 @@ CGINCLUDE
   half _EmissionGain;
 
   struct v2f {
-    float4 vertex : POSITION;
+    float4 vertex : SV_POSITION;
     fixed4 color : COLOR;
     float2 texcoord : TEXCOORD0;
   };
@@ -91,30 +83,16 @@ CGINCLUDE
     disp.y += waveform * .1;
     v.color = v.color*.5 + v.color*_BeatOutput.z*.5;
 #endif
-
-    // Slightly thicken the line on mobile to accommodate the softer interior line. This reduces artifacts
-    // from the low resolution.
-#if SHARP_AND_BLOOMY
-    float widthScale = 1.0;
-#else
-    float widthScale = 1.6;
-#endif
-
     // This recreates the standard ribbon position with some tapering at edges
-    v.vertex.xyz = midpointPos_CS + offsetFromMiddleToEdge_CS * envelopePow * widthScale;
+    v.vertex.xyz = midpointPos_CS + offsetFromMiddleToEdge_CS * envelopePow;
 
     // This adds curl noise
     v.vertex.xyz += disp * _DisplacementIntensity * envelopePow;
 
     o.vertex = UnityObjectToClipPos(v.vertex);
-    // TODO(b/123094204) bloom is turned off on mobile as it completely broke the shader
-    // for still-unknown reasons.
-#if SHARP_AND_BLOOMY
     o.color = bloomColor(v.color, _EmissionGain);
-#else
-    o.color = v.color;
-#endif
     o.texcoord = v.texcoord0;
+
     return o;
   }
 
@@ -134,32 +112,15 @@ CGINCLUDE
   }
 
   // Input color is srgb
-  fixed4 frag (v2f i) : COLOR
+  fixed4 frag (v2f i) : SV_Target
   {
     // interior procedural line
-#if SHARP_AND_BLOOMY
-    // Step function: 3 in [.4, .6], 1 elsewhere
-    float procedural = ( abs(i.texcoord.y - 0.5) < .1 ) ? 3 : 1;
-#else
-    // The lack of AA and low resolution on mobile is really visible, so instead use a
-    // softer interior line.  This has a lot more brightness, so it's good that the
-    // vertex color isn't also blown out.
-
-    float edginess = ( abs(i.texcoord.y - 0.5) * 2.0 );  // in [0, 1]
-    // Smooth ramp from 2 in the middle to 1 on the edge
-    float procedural = lerp(2.0, 1.0, edginess);
-#endif
-
-    // Ignore incoming i.color.a
-#if SELECTION_ON
-    float3 unencoded = GetSelectionColor() * (0.5 * procedural);
-#else
-    float3 unencoded = i.color.rgb * (procedural * procedural);
-#endif
-
-    // It doesn't matter which of these is first since they can't both be active at the same time;
-    // but only one ordering will compile because of the return types.
-    return SrgbToNative(float4(unencoded), 1.0);
+    float procedural = ( abs(i.texcoord.y - 0.5) < .1 ) ? 2 : 0;
+    i.color.a = 1; // kill any other alpha values that may come into this brush
+    float4 c =  i.color + i.color * procedural;
+    c = float4(c.rgb * c.a, 1.0);
+    c = SrgbToNative(c);
+    return c;
   }
 ENDCG
 

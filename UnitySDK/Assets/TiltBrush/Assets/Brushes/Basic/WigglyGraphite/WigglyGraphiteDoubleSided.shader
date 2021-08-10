@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,41 +23,25 @@ Shader "Brush/Special/WigglyGraphiteDoubleSided" {
     Cull Off
 
     CGPROGRAM
-      #pragma target 4.0
-      #pragma surface surf StandardSpecular vertex:vert addshadow
+      #pragma target 3.0
+      #pragma surface surf StandardSpecular vertex:vert alphatest:_Cutoff addshadow
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
-      // Faster compiles
-      #pragma skip_variants INSTANCING_ON
 
       #include "../../../Shaders/Include/Brush.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
-
-      struct appdata {
-        float4 vertex : POSITION;
-        float2 texcoord : TEXCOORD0;
-        float2 texcoord1 : TEXCOORD1;
-        float2 texcoord2 : TEXCOORD2;
-        half3 normal : NORMAL;
-        fixed4 color : COLOR;
-        float4 tangent : TANGENT;
-        UNITY_VERTEX_INPUT_INSTANCE_ID
-      };
 
       struct Input {
         float2 uv_MainTex;
         float4 color : Color;
+        float2 texcoord1 : TEXCOORD1;
         fixed vface : VFACE;
       };
 
       sampler2D _MainTex;
-      float _Cutoff;
 
-      void vert(inout appdata i, out Input o) {
-        UNITY_INITIALIZE_OUTPUT(Input, o);
-        o.color = TbVertToSrgb(i.color);
+      void vert(inout appdata_full i) {
+        i.color = TbVertToSrgb(i.color);
       }
 
       void surf(Input IN, inout SurfaceOutputStandardSpecular o) {
@@ -76,13 +60,7 @@ Shader "Brush/Special/WigglyGraphiteDoubleSided" {
         o.Smoothness = 0;
         o.Albedo = IN.color.rgb;
         o.Alpha = tex2D(_MainTex, scrollUV).w * IN.color.a;
-        if (o.Alpha < _Cutoff) {
-          discard;
-        }
-        o.Alpha = 1;
         o.Normal.z *= IN.vface;
-
-        SURF_FRAG_MOBILESELECT(o);
       }
     ENDCG
   }

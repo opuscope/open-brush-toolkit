@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,17 +23,18 @@ Shader "Brush/Special/LightWire" {
   SubShader {
     Cull Back
     CGPROGRAM
-    #pragma target 4.0
+    #pragma target 3.0
     #pragma surface surf StandardSpecular vertex:vert noshadow
     #pragma multi_compile __ AUDIO_REACTIVE
     #pragma multi_compile __ TBT_LINEAR_TARGET
-    #pragma multi_compile __ SELECTION_ON
     #include "../../../Shaders/Include/Brush.cginc"
-    #include "../../../Shaders/Include/MobileSelection.cginc"
 
     struct Input {
       float2 uv_MainTex;
+      float2 uv_BumpMap;
       float4 color : Color;
+      float3 worldPos;
+      float3 viewDir;
     };
 
     sampler2D _MainTex;
@@ -41,8 +42,7 @@ Shader "Brush/Special/LightWire" {
     fixed4 _Color;
     half _Shininess;
 
-    void vert (inout appdata_full v, out Input o) {
-      UNITY_INITIALIZE_OUTPUT(Input, o);
+    void vert (inout appdata_full v) {
       v.color = TbVertToSrgb(v.color);
 
       // Radius is stored in texcoord (used to be tangent.w)
@@ -100,8 +100,6 @@ Shader "Brush/Special/LightWire" {
       o.Albedo   = SrgbToNative3(o.Albedo);
       o.Emission = SrgbToNative3(o.Emission);
       o.Specular = SrgbToNative3(o.Specular);
-
-      SURF_FRAG_MOBILESELECT(o);
     }
     ENDCG
   }

@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,11 +22,9 @@ CGINCLUDE
   #include "UnityCG.cginc"
   #include "../../../Shaders/Include/Brush.cginc"
   #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
-  #include "../../../Shaders/Include/MobileSelection.cginc"
   #pragma multi_compile __ AUDIO_REACTIVE
   #pragma multi_compile __ TBT_LINEAR_TARGET
   #pragma multi_compile_fog
-  #pragma multi_compile __ SELECTION_ON
   #pragma target 3.0
   sampler2D _MainTex;
   float4 _MainTex_ST;
@@ -40,7 +38,7 @@ CGINCLUDE
   };
 
   struct v2f {
-    float4 pos : SV_POSITION;
+    float4 vertex : SV_POSITION;
     fixed4 color : COLOR;
     float2 texcoord : TEXCOORD0;
     UNITY_FOG_COORDS(1)
@@ -67,11 +65,11 @@ CGINCLUDE
 
     // Technically these are not yet in NDC because they haven't been divided by W, so their
     // range is currently [-W, W].
-    o.pos = UnityObjectToClipPos(float4(v.vertex.xyz + v.normal.xyz * bulge, v.vertex.w));
+    o.vertex = UnityObjectToClipPos(float4(v.vertex.xyz + v.normal.xyz * bulge, v.vertex.w));
     float4 outline_NDC = UnityObjectToClipPos(float4(v.vertex.xyz + v.normal.xyz * inflate, v.vertex.w));
 
     // Displacement in proper NDC coords (e.g. [-1, 1])
-    float3 disp = outline_NDC.xyz / outline_NDC.w - o.pos.xyz / o.pos.w;
+    float3 disp = outline_NDC.xyz / outline_NDC.w - o.vertex.xyz / o.vertex.w;
 
     // Magnitude is a scaling factor to shrink large outlines down to a max width, in NDC space.
     // Notice here we're only measuring 2D displacment in X and Y.
@@ -83,19 +81,19 @@ CGINCLUDE
     // component so both sides of the += operator below are in the same space. Also note
     // that the w component is a function of depth, so modifying X and Y independent of Z
     // should mean that the original w value remains valid.
-    o.pos.xyz += float3(disp.xy * mag, disp.z) * o.pos.w * outlineEnabled;
+    o.vertex.xyz += float3(disp.xy * mag, disp.z) * o.vertex.w * outlineEnabled;
 
     // Push Z back to avoid z-fighting when scaled very small. This is not legit,
     // mathematically speaking and likely causes crazy surface derivitives.
-    o.pos.z -= disp.z * o.pos.w * outlineEnabled;
+    o.vertex.z -= disp.z * o.vertex.w * outlineEnabled;
 
-    o.color = v.color;
-    o.color.a = 1;
-    o.color.xyz += worldNormal.y *.2;
-    o.color.xyz = max(0, o.color.xyz);
-    o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
-    UNITY_TRANSFER_FOG(o, o.pos);
-    return o;
+        o.color = v.color;
+        o.color.a = 1;
+        o.color.xyz += worldNormal.y *.2;
+        o.color.xyz = max(0, o.color.xyz);
+        o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
+    UNITY_TRANSFER_FOG(o, o.vertex);
+        return o;
   }
 
   v2f vert (appdata_t v)
@@ -114,14 +112,12 @@ CGINCLUDE
   {
     float4 color = float4(0,0,0,1);
     UNITY_APPLY_FOG(i.fogCoord, color);
-    FRAG_MOBILESELECT(color)
     return color;
   }
 
   fixed4 fragColor (v2f i) : SV_Target
   {
     UNITY_APPLY_FOG(i.fogCoord, i.color);
-    FRAG_MOBILESELECT(i.color)
     return i.color;
   }
 

@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,11 +36,9 @@ Category {
       #pragma glsl
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       fixed4 _TintColor;
@@ -53,7 +51,7 @@ Category {
       };
 
       struct v2f {
-        float4 pos : SV_POSITION;
+        float4 vertex : SV_POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
       };
@@ -85,7 +83,7 @@ Category {
         float3 quantPos = ceil(worldPos.xyz * q) / q;
         worldPos.xyz = quantPos;
         worldPos = mul(xf_CS, worldPos);
-        o.pos = mul(UNITY_MATRIX_VP,  worldPos);
+        o.vertex = mul(UNITY_MATRIX_VP,  worldPos);
 
         o.color = 2 * v.color + v.color.yzxw * _BeatOutput.x;
         o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
@@ -98,7 +96,6 @@ Category {
         float4 c = i.color * _TintColor * tex2D(_MainTex, i.texcoord);
         c = float4(c.rgb * c.a, 1.0);
         c = SrgbToNative(c);
-        FRAG_MOBILESELECT(c)
         return c;
       }
       ENDCG

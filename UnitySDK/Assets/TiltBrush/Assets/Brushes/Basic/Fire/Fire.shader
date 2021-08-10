@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@ Properties {
   _Scroll1 ("Scroll1", Float) = 0
   _Scroll2 ("Scroll2", Float) = 0
   _DisplacementIntensity("Displacement", Float) = .1
-  _EmissionGain ("Emission Gain", Range(0, 1)) = 0.5
+    _EmissionGain ("Emission Gain", Range(0, 1)) = 0.5
 }
 
 Category {
@@ -38,11 +38,9 @@ Category {
       #pragma multi_compile_particles
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -59,7 +57,7 @@ Category {
       };
 
       struct v2f {
-        float4 pos : POSITION;
+        float4 vertex : POSITION;
         float4 color : COLOR;
 #if SHADER_TARGET >= 40
         centroid float2 texcoord : TEXCOORD0;
@@ -81,7 +79,7 @@ Category {
         v2f o;
         o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
         o.color = bloomColor(v.color, _EmissionGain);
-        o.pos = UnityObjectToClipPos(v.vertex);
+        o.vertex = UnityObjectToClipPos(v.vertex);
         o.worldPos = mul(unity_ObjectToWorld, v.vertex);
         return o;
       }
@@ -110,19 +108,16 @@ Category {
         //procedural_line = pow(procedural_line, i.texcoord.x* 10);
 
 #else
-        displacement = tex2D(_MainTex, i.texcoord + half2(-_Time.x * _Scroll1, 0)  ).a;
+         displacement = tex2D(_MainTex, i.texcoord + half2(-_Time.x * _Scroll1, 0)  ).a;
 #endif
 
-        half4 tex = tex2D(_MainTex, i.texcoord + half2(-_Time.x * _Scroll2, 0) - displacement * _DisplacementIntensity);
-		tex.xyz *= step(0.01, tex.xyz);
-
+         half4 tex = tex2D(_MainTex, i.texcoord + half2(-_Time.x * _Scroll2, 0) - displacement * _DisplacementIntensity);
 #ifdef AUDIO_REACTIVE
         tex = tex * .5 + 2 * procedural_line * ( envelope * envelopeHalf);
 #endif
         float4 color = i.color * tex;
         color = float4(color.rgb * color.a, 1.0);
         color = SrgbToNative(color);
-        FRAG_MOBILESELECT(color)
         return color;
       }
       ENDCG

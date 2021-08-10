@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@ Properties {
 }
 
 Category {
-  Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" "DisableBatching"="True" }
+  Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
   Blend SrcAlpha One
   AlphaTest Greater .01
   ColorMask RGB
@@ -32,10 +32,8 @@ Category {
       #pragma fragment frag
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -47,7 +45,7 @@ Category {
       };
 
       struct v2f {
-        float4 pos : POSITION;
+        float4 vertex : SV_POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
       };
@@ -68,17 +66,16 @@ Category {
 #else
         o.color = TbVertToNative(v.color);
 #endif
-        o.pos = UnityObjectToClipPos(v.vertex);
+        o.vertex = UnityObjectToClipPos(v.vertex);
+
         return o;
 
       }
 
-      fixed4 frag (v2f i) : COLOR
+      fixed4 frag (v2f i) : SV_Target
       {
-        float4 c = tex2D(_MainTex, i.texcoord );
-        c *= i.color;
-        FRAG_MOBILESELECT(c)
-        return c;
+         half4 c = tex2D(_MainTex, i.texcoord );
+        return i.color * c;
       }
       ENDCG
     }

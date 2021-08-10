@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,13 +37,11 @@ Category {
       #pragma multi_compile_particles
       #pragma target 3.0
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
       #include "../../../Shaders/Include/Particles.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       fixed4 _TintColor;
@@ -114,14 +112,7 @@ Category {
         float3 highlightcolor = tex.a;
 
         float4 color = float4(basecolor + highlightcolor, 1);
-        color = SrgbToNative(color);
-
-#if SELECTION_ON
-        color.rgb = GetSelectionColor() * tex.r;
-        color.a = tex.a;
-#endif
-
-        return color;
+        return SrgbToNative(color);
       }
       ENDCG
     }

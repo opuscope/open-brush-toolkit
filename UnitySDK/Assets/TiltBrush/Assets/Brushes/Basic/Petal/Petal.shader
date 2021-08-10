@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,13 +23,12 @@ Shader "Brush/Special/Petal" {
     Cull Off
 
     CGPROGRAM
-      #pragma target 4.0
+      #pragma target 3.0
       #pragma surface surf StandardSpecular vertex:vert addshadow
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ ODS_RENDER
-      #pragma multi_compile __ SELECTION_ON
+
       #include "../../../Shaders/Include/Brush.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       struct Input {
         float2 uv_MainTex;
@@ -39,8 +38,7 @@ Shader "Brush/Special/Petal" {
 
       half _Shininess;
 
-      void vert(inout appdata_full i, out Input o) {
-        UNITY_INITIALIZE_OUTPUT(Input, o);
+      void vert(inout appdata_full i) {
         i.color = TbVertToNative(i.color);
       }
 
@@ -55,8 +53,6 @@ Shader "Brush/Special/Petal" {
         o.Smoothness = _Shininess;
         o.Specular = _SpecColor * fAO;
         o.Alpha = 1;
-
-        SURF_FRAG_MOBILESELECT(o);
       }
     ENDCG
   }

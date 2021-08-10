@@ -1,10 +1,10 @@
-// Copyright 2020 The Tilt Brush Authors
+// Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,11 +30,9 @@ Category {
       #pragma multi_compile_particles
       #pragma multi_compile_fog
       #pragma multi_compile __ TBT_LINEAR_TARGET
-      #pragma multi_compile __ SELECTION_ON
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
-      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -46,7 +44,7 @@ Category {
       };
 
       struct v2f {
-        float4 pos : POSITION;
+        float4 vertex : SV_POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
         UNITY_FOG_COORDS(1)
@@ -56,26 +54,26 @@ Category {
       {
 
         //
-        // XXX - THIS SHADER SHOULD BE DELETED AFTER TAPERING IS DONE IN THE GEOMETRY GENERATION
+        // XXX - THIS SHADER SHOULD BE DELETED AFTER WE TAPERING IS DONE IN THE GEOMETRY GENERATION
         //
 
         v2f o;
         float envelope = sin(v.texcoord0.x * 3.14159);
         float widthMultiplier = 1 - envelope;
         v.vertex.xyz += -v.texcoord1 * widthMultiplier;
-        o.pos = UnityObjectToClipPos(v.vertex);
+        o.vertex = UnityObjectToClipPos(v.vertex);
         o.color = TbVertToNative(v.color);
         o.texcoord = v.texcoord0;
-        UNITY_TRANSFER_FOG(o, o.pos);
+        UNITY_TRANSFER_FOG(o, o.vertex);
         return o;
       }
 
-      fixed4 frag (v2f i) : COLOR
+      fixed4 frag (v2f i) : SV_Target
       {
+
         UNITY_APPLY_FOG(i.fogCoord, i.color.rgb);
-        float4 color = float4(i.color.rgb, 1);
-        FRAG_MOBILESELECT(color)
-        return color;
+        return float4(i.color.rgb, 1);
+
       }
 
       ENDCG
