@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,17 +35,19 @@ Category {
       #pragma multi_compile_particles
       #pragma target 3.0
       #pragma multi_compile __ TBT_LINEAR_TARGET
+      #pragma multi_compile __ SELECTION_ON
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
       #include "../../../Shaders/Include/Particles.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       fixed4 _TintColor;
 
       struct v2f {
-        float4 vertex : SV_POSITION;
+        float4 pos : SV_POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
       };
@@ -98,7 +100,7 @@ Category {
         center_WS.xyz += mul(xf_CS, float4(disp, 0));
 
         float4 corner = OrientParticle_WS(center_WS.xyz, halfSize, v.vid, rotation);
-        o.vertex = mul(UNITY_MATRIX_VP, corner);
+        o.pos = mul(UNITY_MATRIX_VP, corner);
 
         o.color = v.color;
         v.color.a = 1;
@@ -112,6 +114,11 @@ Category {
         float4 c =  tex2D(_MainTex, i.texcoord);
         c *= i.color * _TintColor;
         c = SrgbToNative(c);
+#if SELECTION_ON
+        float strength = length(c.rgb * c.a) * 3;
+        FRAG_MOBILESELECT(c)
+        c.rgb *= strength;
+#endif
         return c;
       }
       ENDCG

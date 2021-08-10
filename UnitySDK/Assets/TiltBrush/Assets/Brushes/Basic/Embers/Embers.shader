@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,12 +39,14 @@ Category {
       #pragma multi_compile_particles
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
+      #pragma multi_compile __ SELECTION_ON
       #pragma target 3.0
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
       #include "../../../Shaders/Include/Particles.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       fixed4 _TintColor;
@@ -69,21 +71,31 @@ Category {
       // t01 is a time value in [0, 1]
       float3 ComputeDisplacement(float3 pos, float seed, float t01) {
         float t2 = _Time.y;
+        float floatUpTime01 = t01;
+
+#if SELECTION_ON
+        t01 = 0;
+        t2 = 0;
+#endif
 
         // Animate the motion of the embers
         // Accumulate all displacement into a common, pre-transformed space.
         float4 dispVec = float4(_ScrollDistance, 0.0) * t01;
 
         dispVec.x += sin(t01 * _ScrollJitterFrequency + seed * 100 + t2 + pos.z) * _ScrollJitterIntensity;
-        dispVec.y += (fmod(seed * 100, 1) - 0.5) * _ScrollDistance.y * t01;
+        dispVec.y += (fmod(seed * 100, 1) - 0.5) * _ScrollDistance.y * floatUpTime01;
         dispVec.z += cos(t01 * _ScrollJitterFrequency + seed * 100 + t2 + pos.x) * _ScrollJitterIntensity;
 
 #ifdef AUDIO_REACTIVE
         float fft = (tex2Dlod(_FFTTex, float4(pos.y,0,0,0)).b)*2 + .1;
         dispVec.y += fft;
 #endif
-        // Allow scaling to affect particle speed and distance in toolkit
-        return dispVec * kDecimetersToWorldUnits  * length(unity_ObjectToWorld[0].xyz);
+
+#if SELECTION_ON
+        dispVec.y = abs(dispVec.y * 0.2);
+        dispVec *= 0.5;
+#endif
+        return dispVec * kDecimetersToWorldUnits;
       }
 
       v2f vert (ParticleVertexWithSpread_t v) {
@@ -126,7 +138,6 @@ Category {
         float4 corner_WS = OrientParticle_WS(center_WS.xyz, halfSize, v.vid, rotation);
         o.vertex = mul(UNITY_MATRIX_VP, corner_WS);
 #else
-        // TODO(pld): convince drew to use this version
         // Displacement is in canvas space
         // Note that we assume object space == canvas space (which it is, for TB)
         center = center + float4(disp.xyz, 0);
@@ -136,16 +147,19 @@ Category {
 
         o.color = v.color;
         o.texcoord = TRANSFORM_TEX(v.texcoord.xy,_MainTex);
-
         return o;
       }
 
       // i.color is srgb
       fixed4 frag (v2f i) : SV_Target
       {
-        float4 color = 2.0f * i.color * _TintColor * tex2D(_MainTex, i.texcoord);
+        float4 texCol = tex2D(_MainTex, i.texcoord);
+        float4 color = 2.0f * i.color * _TintColor * texCol;
         color = float4(color.rgb * color.a, 1.0);
         color = SrgbToNative(color);
+#if SELECTION_ON
+        color.rgb = GetSelectionColor() * texCol.a;
+#endif
         return color;
       }
       ENDCG

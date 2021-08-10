@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,11 +27,26 @@ Properties {
     LOD 100
 
     CGPROGRAM
-    #pragma target 3.0
-    #pragma surface surf StandardSpecular vertex:vert alphatest:_Cutoff addshadow
+    #pragma target 4.0
+    #pragma surface surf StandardSpecular vertex:vert addshadow
     #pragma multi_compile __ AUDIO_REACTIVE
     #pragma multi_compile __ TBT_LINEAR_TARGET
+    #pragma multi_compile __ SELECTION_ON
+    // Faster compiles
+    #pragma skip_variants INSTANCING_ON
     #include "../../../Shaders/Include/Brush.cginc"
+    #include "../../../Shaders/Include/MobileSelection.cginc"
+
+    struct appdata {
+      float4 vertex : POSITION;
+      float3 texcoord : TEXCOORD0;
+      float3 texcoord1 : TEXCOORD1;
+      float3 texcoord2 : TEXCOORD2;
+      half3 normal : NORMAL;
+      fixed4 color : COLOR;
+      float4 tangent : TANGENT;
+      UNITY_VERTEX_INPUT_INSTANCE_ID
+    };
 
     struct Input {
       float2 uv_MainTex;
@@ -45,8 +60,10 @@ Properties {
     sampler2D _BumpMap;
     fixed4 _Color;
     half _Shininess;
+    fixed _Cutoff;
 
-    void vert (inout appdata_full v) {
+    void vert (inout appdata v, out Input o) {
+      UNITY_INITIALIZE_OUTPUT(Input, o);
       v.color = TbVertToSrgb(v.color);
 
       float t = 0.0;
@@ -88,14 +105,17 @@ Properties {
       o.Specular = SrgbToNative(_SpecColor * tex).rgb;
       o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
       o.Alpha = tex.a * IN.color.a;
+      if (o.Alpha < _Cutoff) {
+        discard;
+      }
+      o.Alpha = 1;
 #ifdef AUDIO_REACTIVE
       o.Emission = o.Albedo;
       o.Albedo = .2;
       o.Specular *= .5;
 #endif
-
+      SURF_FRAG_MOBILESELECT(o);
       o.Normal.z *= IN.vface;
-
     }
     ENDCG
     }

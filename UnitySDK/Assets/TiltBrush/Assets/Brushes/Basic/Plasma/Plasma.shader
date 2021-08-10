@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -42,11 +42,13 @@ Category {
       #pragma fragment frag
       #pragma target 3.0
       #pragma multi_compile_particles
+      #pragma multi_compile __ SELECTION_ON
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -59,7 +61,7 @@ Category {
       };
 
       struct v2f {
-        float4 vertex : SV_POSITION;
+        float4 vertex : POSITION;
         fixed4 color : COLOR;
         float2 texcoord : TEXCOORD0;
         float3 worldPos : TEXCOORD1;
@@ -90,7 +92,7 @@ Category {
         return abs(noise.x + noise.y) * 0.5;
       }
 
-      fixed4 frag (v2f i) : SV_Target
+      fixed4 frag (v2f i) : COLOR
       {
         // Workaround for b/30500118, caused by b/30504121
         i.color.a = saturate(i.color.a);
@@ -134,6 +136,9 @@ Category {
         i.color.a = 1; // kill any other alpha values that may come into this brush
 
         float4 c = i.color * tex;
+#if SELECTION_ON
+        c.rgb = GetSelectionColor() * tex;
+#endif
         return float4(c.rgb * c.a, 1.0);
       }
 

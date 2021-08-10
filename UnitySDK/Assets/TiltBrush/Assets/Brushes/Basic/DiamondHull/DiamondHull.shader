@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,12 +24,14 @@ Shader "Brush/Special/DiamondHull" {
     Fog{ Mode Off }
 
     CGPROGRAM
-      #pragma target 3.0
+      #pragma target 4.0
       #pragma surface surf StandardSpecular vertex:vert nofog
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
+      #pragma multi_compile __ SELECTION_ON
       #include "../../../Shaders/Include/Brush.cginc"
       #include "Assets/ThirdParty/Noise/Shaders/Noise.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
 
@@ -124,7 +126,7 @@ Shader "Brush/Special/DiamondHull" {
         const float nmedium = 1;
         const float nfilm = 1.3;
         const float ninternal = 1;
-        
+
         const float cos0 = abs(dot(I, N));
 
         //float3 thickTex = texture(thickness, u, v);
@@ -153,7 +155,7 @@ Shader "Brush/Special/DiamondHull" {
         // Calculate rim
         half rim = 1.0 - abs(dot(normalize(IN.viewDir), IN.worldNormal));
         rim *= 1-pow(rim,5);
-        
+
         const float3 I = (_WorldSpaceCameraPos - IN.worldPos);
         rim = lerp(rim, 150,
               1 - saturate(abs(dot(normalize(I), IN.worldNormal)) / .1));
@@ -162,6 +164,7 @@ Shader "Brush/Special/DiamondHull" {
         diffraction = GetDiffraction(diffraction, o.Normal, normalize(IN.viewDir));
 
         o.Emission = rim * IN.color * diffraction * .5 + rim * diffraction * .25;
+        SURF_FRAG_MOBILESELECT(o);
         o.Specular = SrgbToNative(IN.color).rgb * clamp(diffraction, .0, 1);
       }
     ENDCG

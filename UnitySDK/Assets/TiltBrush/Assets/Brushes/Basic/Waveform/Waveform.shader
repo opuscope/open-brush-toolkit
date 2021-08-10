@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,9 +36,11 @@ Category {
       #pragma multi_compile_particles
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
+      #pragma multi_compile __ SELECTION_ON
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       float4 _MainTex_ST;
@@ -51,7 +53,7 @@ Category {
       };
 
       struct v2f {
-        float4 vertex : SV_POSITION;
+        float4 pos : POSITION;
         float4 color : COLOR;
         float2 texcoord : TEXCOORD0;
         float4 unbloomedColor : TEXCOORD1;
@@ -62,7 +64,7 @@ Category {
         v.color = TbVertToSrgb(v.color);
 
         v2f o;
-        o.vertex = UnityObjectToClipPos(v.vertex);
+        o.pos = UnityObjectToClipPos(v.vertex);
         o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
         o.color = bloomColor(v.color, _EmissionGain);
         o.unbloomedColor = v.color;
@@ -70,7 +72,7 @@ Category {
       }
 
       // Input colors are srgb
-      fixed4 frag (v2f i) : SV_Target
+      fixed4 frag (v2f i) : COLOR
       {
         // Envelope
         float envelope = sin(i.texcoord.x * 3.14159);
@@ -90,6 +92,7 @@ Category {
         color = i.color * color;
         color = float4(color.rgb * color.a, 1.0);
         color = SrgbToNative(color);
+        FRAG_MOBILESELECT(color)
         return color;
       }
       ENDCG

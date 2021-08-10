@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,11 @@ SubShader {
   #pragma surface surf Lambert vertex:vert addshadow
   #pragma target 3.0
   #pragma multi_compile __ TBT_LINEAR_TARGET
+  #pragma multi_compile __ SELECTION_ON
+  // Faster compiles
+  #pragma skip_variants INSTANCING_ON
   #include "../../../Shaders/Include/Brush.cginc"
+  #include "../../../Shaders/Include/MobileSelection.cginc"
 
   fixed4 _Color;
 
@@ -35,8 +39,9 @@ SubShader {
     float3 normal : NORMAL;
     float4 tangent : TANGENT;
     float2 texcoord0 : TEXCOORD0;
-    float4 texcoord1 : TEXCOORD1;
+    float3 texcoord1 : TEXCOORD1;
     float4 texcoord2 : TEXCOORD2;
+    UNITY_VERTEX_INPUT_INSTANCE_ID
   };
 
 
@@ -64,6 +69,7 @@ SubShader {
     fixed4 c = _Color;
     o.Normal = float3(0,0,IN.vface);
     o.Albedo = c.rgb * IN.color.rgb;
+    SURF_FRAG_MOBILESELECT(o);
   }
   ENDCG
 }

@@ -1,10 +1,10 @@
-// Copyright 2017 Google Inc.
+// Copyright 2020 The Tilt Brush Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,11 +36,13 @@ Category {
       #pragma multi_compile_particles
       #pragma multi_compile __ AUDIO_REACTIVE
       #pragma multi_compile __ TBT_LINEAR_TARGET
+      #pragma multi_compile __ SELECTION_ON
       #pragma target 3.0
 
       #include "UnityCG.cginc"
       #include "../../../Shaders/Include/Brush.cginc"
       #include "../../../Shaders/Include/Particles.cginc"
+      #include "../../../Shaders/Include/MobileSelection.cginc"
 
       sampler2D _MainTex;
       float4 _MainTex_ST;
@@ -86,9 +88,14 @@ Category {
       // Input color is srgb
       fixed4 frag (v2f i) : SV_Target
       {
-        float4 color = i.color * tex2D(_MainTex, i.texcoord);
+        float4 texCol = tex2D(_MainTex, i.texcoord);
+        float4 color = i.color * texCol;
         color = float4(color.rgb * color.a, 1.0);
         color = SrgbToNative(color);
+#if SELECTION_ON
+        color.rgb = GetSelectionColor() * texCol.r;
+        color.a = texCol.a;
+#endif
         return color;
       }
       ENDCG
