@@ -30,7 +30,7 @@ float4 bloomColor(float4 color, float gain) {
   color.rgb = max(color.rgb, float3(cmin, cmin, cmin));
   // If we try to remove this pow() from .a, it brightens up
   // pressure-sensitive strokes; looks better as-is.
-  color = pow(color, 2.2);
+  color = pow(abs(color), 2.2);
   color.rgb *= 2 * exp(gain * 10);
   return color;
 }
@@ -55,9 +55,9 @@ uniform float4 _PeakBandLevels;
 
 // returns a random value seeded by color between 0 and 2 pi
 float randomizeByColor(float4 color) {
-  const float PI = 3.14159265359;
+  float kPI = 3.14159265359;
   float val =  (3*color.r + 2*color.g + color.b) * 1000;
-  val =  2 * PI * fmod(val, 1);
+  val =  2 * kPI * fmod(val, 1);
   return val;
 }
 
