@@ -1,8 +1,8 @@
-// Example Shader for Universal RP
+ // Example Shader for Universal RP
 // Written by @Cyanilux
 // https://www.cyanilux.com/tutorials/urp-shader-code
 
-Shader "StandardSpecular_URP" {
+Shader "Brush/Visualizer/NeonPulse_URP" {
 	Properties {
 		[MainTexture] _BaseMap("Base Map (RGB) Smoothness / Alpha (A)", 2D) = "white" {}
         [MainColor]   _BaseColor("Base Color", Color) = (1, 1, 1, 1)
@@ -34,6 +34,7 @@ Shader "StandardSpecular_URP" {
 		[Toggle(_EMISSION)] _Emission ("Emission", Float) = 0
 		[HDR] _EmissionColor("Emission Color", Color) = (0,0,0)
         [NoScaleOffset]_EmissionMap("Emission Map", 2D) = "black" {}
+        _EmissionGain ("Emission Gain", Range(0, 1)) = 0.5
 
 		[Space(20)]
 		[Toggle(_SPECULARHIGHLIGHTS_OFF)] _SpecularHighlights("Turn Specular Highlights Off", Float) = 0
@@ -41,18 +42,19 @@ Shader "StandardSpecular_URP" {
 		// These are inverted fom what the URP/Lit shader does which is a bit annoying.
 		// They would usually be handled by the Lit ShaderGUI but I'm using Toggle instead,
 		// which assumes the keyword is more of an "on" state.
-        
-        [Space(20)]
-        [ToggleOff] _Receive_Shadows("Receive Shadows", Float) = 1.0
-                
+
 		// Not including Detail maps in this template
 	}
 	SubShader {
 		Tags {
 			"RenderPipeline"="UniversalPipeline"
-			"RenderType"="Opaque"
-			"Queue"="Geometry"
+			"RenderType"="Transparent"
+			"Queue"="Transparent"
 		}
+
+        Blend One One
+        Cull Off 
+        ZWrite Off
     
 		HLSLINCLUDE
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -61,6 +63,7 @@ Shader "StandardSpecular_URP" {
 			float4 _BaseMap_ST;
 			float4 _BaseColor;
 			float4 _EmissionColor;
+			float _EmissionGain;
 			float4 _SpecColor;
 			float _Metallic;
 			float _Smoothness;
@@ -116,6 +119,10 @@ Shader "StandardSpecular_URP" {
 			#pragma multi_compile _ LIGHTMAP_ON
 			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
 			#pragma multi_compile_fog
+
+            // Open Brush Keywords
+            #pragma multi_compile __ AUDIO_REACTIVE
+            #pragma multi_compile __ TBT_LINEAR_TARGET
             
 			// ---------------------------------------------------------------------------
 			// Structs
@@ -161,8 +168,9 @@ Shader "StandardSpecular_URP" {
 				//UNITY_VERTEX_OUTPUT_STEREO
 			};
 
-			#include "Include/PBRSurface.hlsl"
-			#include "Include/PBRInput.hlsl"
+			#include "../../../Shaders/Include/PBRSurface.hlsl"
+			#include "../../../Shaders/Include/PBRInput.hlsl"
+            #include "../../../Shaders/Include/Brush.cginc"
 
 			// ---------------------------------------------------------------------------
 			// Vertex Shader
@@ -208,7 +216,8 @@ Shader "StandardSpecular_URP" {
 				#endif
 
 				OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-				OUT.color = IN.color;
+				//OUT.color = IN.color;
+				OUT.color = TbVertToSrgb(IN.color);
 				return OUT;
 			}
 
@@ -227,6 +236,24 @@ Shader "StandardSpecular_URP" {
 				// Setup InputData
 				InputData inputData;
 				InitializeInputData(IN, surfaceData.normalTS, inputData);
+
+                surfaceData.smoothness = .8;
+                surfaceData.specular = .05;
+                float audioMultiplier = 1;
+                #ifdef AUDIO_REACTIVE
+                audioMultiplier += audioMultiplier * _BeatOutput.x;
+                IN.uv.x -= _BeatOutputAccum.z;
+                IN.color += IN.color * _BeatOutput.w * .25;
+                #else
+                IN.uv.x -= _Time.x*15;
+                #endif
+                IN.uv.x = fmod( abs(IN.uv.x),1);
+                float neon = saturate(pow( 10 * saturate(.2 - IN.uv.x),5) * audioMultiplier);
+                float4 bloom = bloomColor(IN.color, _EmissionGain);
+                // float3 n = WorldNormalVector (IN, surfaceData.normalTS); => inputData.normalWS
+                half rim = 1.0 - saturate(dot(normalize(inputData.viewDirectionWS), inputData.normalWS));
+                bloom *= pow(1-rim,5);
+                surfaceData.emission = SrgbToNative(bloom * neon).rgb;
                 
 				// Simple Lighting (Lambert & BlinnPhong)
 				half4 color = UniversalFragmentPBR(inputData, surfaceData);
@@ -461,7 +488,7 @@ Shader "StandardSpecular_URP" {
 				float4 color		: COLOR;
 			};
 
-			#include "Include/PBRSurface.hlsl"
+			#include "../../../Shaders/Include/PBRSurface.hlsl"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
 
 			Varyings UniversalVertexMeta(Attributes input) {

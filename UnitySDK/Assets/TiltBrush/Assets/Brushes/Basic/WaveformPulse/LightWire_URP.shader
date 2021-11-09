@@ -2,7 +2,7 @@
 // Written by @Cyanilux
 // https://www.cyanilux.com/tutorials/urp-shader-code
 
-Shader "StandardSpecular_URP" {
+Shader "Brush/Visualizer/LightWire_URP" {
 	Properties {
 		[MainTexture] _BaseMap("Base Map (RGB) Smoothness / Alpha (A)", 2D) = "white" {}
         [MainColor]   _BaseColor("Base Color", Color) = (1, 1, 1, 1)
@@ -117,6 +117,10 @@ Shader "StandardSpecular_URP" {
 			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
 			#pragma multi_compile_fog
             
+            // Open Brush Keywords
+            #pragma multi_compile __ AUDIO_REACTIVE
+            #pragma multi_compile __ TBT_LINEAR_TARGET
+            
 			// ---------------------------------------------------------------------------
 			// Structs
 			// ---------------------------------------------------------------------------
@@ -161,8 +165,8 @@ Shader "StandardSpecular_URP" {
 				//UNITY_VERTEX_OUTPUT_STEREO
 			};
 
-			#include "Include/PBRSurface.hlsl"
-			#include "Include/PBRInput.hlsl"
+			#include "../../../Include/PBRSurface.hlsl"
+			#include "../../../Include/PBRInput.hlsl"
 
 			// ---------------------------------------------------------------------------
 			// Vertex Shader
@@ -461,7 +465,7 @@ Shader "StandardSpecular_URP" {
 				float4 color		: COLOR;
 			};
 
-			#include "Include/PBRSurface.hlsl"
+			#include "../../../Include/PBRSurface.hlsl"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
 
 			Varyings UniversalVertexMeta(Attributes input) {
