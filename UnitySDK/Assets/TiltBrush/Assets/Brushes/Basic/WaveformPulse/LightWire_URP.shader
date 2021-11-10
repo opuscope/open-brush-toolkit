@@ -165,8 +165,10 @@ Shader "Brush/Visualizer/LightWire_URP" {
 				//UNITY_VERTEX_OUTPUT_STEREO
 			};
 
-			#include "../../../Include/PBRSurface.hlsl"
-			#include "../../../Include/PBRInput.hlsl"
+			#include "../../../Shaders/Include/PBRSurface.hlsl"
+			#include "../../../Shaders/Include/PBRInput.hlsl"
+            #include "../../../Shaders/Include/Brush.cginc"
+
 
 			// ---------------------------------------------------------------------------
 			// Vertex Shader
@@ -212,7 +214,19 @@ Shader "Brush/Visualizer/LightWire_URP" {
 				#endif
 
 				OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-				OUT.color = IN.color;
+				OUT.color = TbVertToSrgb(IN.color);
+                
+                // Radius is stored in texcoord (used to be tangent.w)
+                // TODO - BME : CHECK WHAT'S IN THIS
+                float radius = OUT.uv.z;
+                
+                float t;
+                float envelope = sin(fmod(OUT.uv.x * 2, 1.0f) * PI);
+                float lights = envelope < .15 ? 1 : 0;
+                
+                radius *= 0.9;
+                IN.positionOS.xyz += IN.normalOS * lights * radius;
+                
 				return OUT;
 			}
 
@@ -465,7 +479,7 @@ Shader "Brush/Visualizer/LightWire_URP" {
 				float4 color		: COLOR;
 			};
 
-			#include "../../../Include/PBRSurface.hlsl"
+			#include "../../../Shaders/Include/PBRSurface.hlsl"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MetaInput.hlsl"
 
 			Varyings UniversalVertexMeta(Attributes input) {
